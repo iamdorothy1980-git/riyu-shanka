@@ -1,0 +1,8 @@
+# Netlify 配置：纯静态站点，不需要构建
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/audio/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"

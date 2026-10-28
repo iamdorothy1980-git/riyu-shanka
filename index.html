@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E9F3FB">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>日语旅游闪卡</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23DBEBF9'/%3E%3Ccircle cx='32' cy='32' r='13' fill='none' stroke='%233E86C8' stroke-width='5'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ================= 首页 ================= -->
+  <section class="view view-home" id="view-home">
+    <header class="home-head">
+      <div class="brand">日语旅游闪卡</div>
+      <div class="sub" id="home-sub">6 个场景</div>
+    </header>
+
+    <div class="module-switch" id="module-switch">
+      <button data-module="sentence" class="on">句子练习</button>
+      <button data-module="word">单词练习</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b id="stat-mastered">0</b><span>已掌握</span></div>
+      <div class="stat"><b id="stat-fav">0</b><span>收藏</span></div>
+      <div class="stat"><b id="stat-total">66</b><span id="stat-total-label">总卡片</span></div>
+    </div>
+
+    <div class="cat-filter" id="cat-filter">
+      <button class="cat-chip on" data-cat="all">全部</button>
+      <button class="cat-chip" data-cat="餐饮">餐饮</button>
+      <button class="cat-chip" data-cat="住宿">住宿</button>
+      <button class="cat-chip" data-cat="交通">交通</button>
+      <button class="cat-chip" data-cat="购物">购物</button>
+      <button class="cat-chip" data-cat="问路">问路</button>
+      <button class="cat-chip" data-cat="紧急">紧急</button>
+      <button class="cat-chip" data-cat="数字时间">数字时间</button>
+    </div>
+
+    <div class="freq-filter" id="freq-filter" hidden>
+      <button class="freq-chip on" data-freq="all">全部</button>
+      <button class="freq-chip" data-freq="top">只背高频</button>
+      <button class="freq-chip" data-freq="core">高频+常用</button>
+    </div>
+
+    <div class="home-actions">
+      <button class="btn primary big" id="btn-start"><span id="start-label">开始练习</span><span class="arrow">→</span></button>
+      <button class="btn ghost big" id="btn-review">只练没掌握的</button>
+      <button class="btn ghost big" id="btn-fav">收藏夹<span class="badge" id="fav-badge">0</span></button>
+      <button class="btn ghost big" id="btn-settings">设置</button>
+    </div>
+
+    <p class="home-tip">先看中文说一遍 · 翻面看答案 · 🎤 打分</p>
+  </section>
+
+  <!-- ================= 练习 ================= -->
+  <section class="view view-study" id="view-study" hidden>
+    <div class="topbar">
+      <button class="icon-btn" id="btn-back" aria-label="返回">←</button>
+      <div class="progress-wrap">
+        <div class="progress"><i id="progress-fill"></i></div>
+        <div class="progress-text" id="progress-text">0 / 16</div>
+      </div>
+      <button class="icon-btn star" id="btn-star" aria-label="收藏">☆</button>
+    </div>
+
+    <div class="card" id="card">
+      <div class="face" id="face"></div>
+    </div>
+
+    <div class="actions" id="actions">
+      <button class="btn primary" id="btn-flip">翻面看答案</button>
+      <div class="rate-row" id="rate-row" hidden>
+        <button class="btn rate again" data-level="1">不认识</button>
+        <button class="btn rate fuzzy" data-level="2">有点模糊</button>
+        <button class="btn rate good" data-level="3">认识</button>
+      </div>
+      <div class="done-actions" id="done-actions" hidden>
+        <button class="btn primary" id="btn-again">再来一轮</button>
+        <button class="btn ghost" id="btn-home2">返回首页</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 跟读弹层 ================= -->
+  <div class="overlay" id="mic-overlay" hidden>
+    <div class="sheet">
+      <div class="sheet-head">
+        <span id="mic-title">跟读练习</span>
+        <button class="icon-btn" id="mic-close" aria-label="关闭">✕</button>
+      </div>
+
+      <div class="mic-banner" id="mic-banner" hidden></div>
+
+      <div class="mic-target" id="mic-target">
+        <div class="ja" id="mic-ja"></div>
+        <div class="kana" id="mic-kana"></div>
+        <button class="mini-btn" id="mic-play">🔊 听原句</button>
+      </div>
+
+      <div class="mic-blind" id="mic-blind" hidden>
+        <div class="mic-blind-label">口语测试 · 说出这句中文的日语</div>
+        <div class="mic-blind-zh" id="mic-blind-zh"></div>
+      </div>
+
+      <button class="mic-btn" id="mic-btn" aria-label="开始录音"><span>🎤</span></button>
+      <div class="mic-status" id="mic-status">点一下麦克风，念出这句话</div>
+      <button class="mic-check" id="mic-check">先检查麦克风是否正常</button>
+
+      <div class="mic-heard" id="mic-heard" hidden></div>
+
+      <div class="score-box" id="mic-score" hidden>
+        <div class="score-ring" id="score-ring">
+          <div class="score-inner">
+            <b id="score-num">0</b>
+            <span>相似度</span>
+          </div>
+        </div>
+        <div class="score-side">
+          <div class="score-label" id="score-label"></div>
+          <div class="diff" id="mic-diff"></div>
+        </div>
+      </div>
+
+      <div class="mic-actions" id="mic-actions" hidden>
+        <button class="btn ghost" id="mic-retry">再试一次</button>
+        <button class="btn primary" id="mic-pass">算通过</button>
+      </div>
+
+      <div class="diag-row">
+        <button class="diag-toggle" id="diag-toggle">诊断信息</button>
+        <button class="diag-toggle" id="diag-copy">复制</button>
+      </div>
+      <pre class="mic-diag" id="mic-diag" hidden></pre>
+    </div>
+  </div>
+
+  <!-- ================= 设置弹层 ================= -->
+  <div class="overlay" id="settings-overlay" hidden>
+    <div class="sheet">
+      <div class="sheet-head">
+        <span>设置</span>
+        <button class="icon-btn" id="settings-close" aria-label="关闭">✕</button>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">跟读判定</div>
+        <div class="segmented" id="set-strict">
+          <button data-v="loose">宽松</button>
+          <button data-v="standard">标准</button>
+          <button data-v="strict">严格</button>
+        </div>
+        <div class="setting-note" id="strict-note"></div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">语速</div>
+        <div class="segmented" id="set-rate">
+          <button data-v="0.7">慢</button>
+          <button data-v="0.9">正常</button>
+          <button data-v="1.1">快</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">日语发音</div>
+        <select class="select" id="set-voice"></select>
+        <div class="setting-note" id="voice-note"></div>
+        <button class="btn ghost" id="btn-test-voice">测试发音</button>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">学习进度备份</div>
+        <div class="backup-row">
+          <button class="btn ghost" id="btn-export">导出进度</button>
+          <button class="btn ghost" id="btn-import">导入进度</button>
+        </div>
+        <input type="file" id="import-file" accept=".json,application/json" hidden>
+        <div class="setting-note">换网址、换设备之前，先导出一个文件；到新地址再导入，已掌握和收藏都能带走。</div>
+      </div>
+
+      <div class="setting-group">
+        <button class="btn danger-ghost" id="btn-reset">重置学习进度</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+</div>
+
+<script src="cards.js"></script>
+<script src="cards-hotel.js"></script>
+<script src="cards-transport.js"></script>
+<script src="cards-shopping.js"></script>
+<script src="cards-direction.js"></script>
+<script src="cards-emergency.js"></script>
+<script src="vocab-a.js"></script>
+<script src="vocab-b.js"></script>
+<script src="vocab-c.js"></script>
+<script src="vocab-d.js"></script>
+<script src="score.js"></script>
+<script src="words.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
