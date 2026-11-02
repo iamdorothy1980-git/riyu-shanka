@@ -94,7 +94,8 @@
     flipped: false,
     revealed: {},
     repeats: {},
-    filter: 'all'
+    filter: 'all',
+    kind: 'session'
   };
 
   /* ---------------- 通用 ---------------- */
@@ -117,6 +118,8 @@
   function showView(name) {
     el.home.hidden = name !== 'home';
     el.study.hidden = name !== 'study';
+    var sv = $('view-search');
+    if (sv) sv.hidden = name !== 'search';
     if (name === 'home') updateStats();
   }
 
@@ -350,6 +353,9 @@
 
   /* ---------------- 练习流程 ---------------- */
   function startSession(filter) {
+    session.kind = 'session';
+    $('search-actions').hidden = true;
+    $('progress-wrap').style.visibility = '';
     var ids = catIds(ui.cat);
     if (filter === 'review') {
       ids = ids.filter(function (id) {
@@ -565,6 +571,11 @@
       });
     });
 
+    Array.prototype.forEach.call(el.face.querySelectorAll('.reply'), function (row) {
+      var i = Number(row.getAttribute('data-i'));
+      if (session.revealed[i]) row.classList.add('open');
+    });
+
     updateRevealAll();
   }
 
@@ -681,6 +692,197 @@
     saveStore();
     updateStar();
     updateStats();
+  }
+
+  /* ---------------- 搜索 ---------------- */
+  var searchIndex = null;
+  var searchState = { q: '', results: [], scroll: 0, terms: [] };
+
+  function normText(str) {
+    var t = String(str == null ? '' : str);
+    try { t = t.normalize('NFKC'); } catch (e) {}
+    t = t.toLowerCase();
+    t = t.replace(/[\s\u3000、。，．,.!?！？「」『』（）()・…‥~〜\-—–:：;；"'“”‘’]/g, '');
+    t = t.replace(/[\u30a1-\u30f6]/g, function (c) {
+      return String.fromCharCode(c.charCodeAt(0) - 0x60);
+    });
+    return t;
+  }
+
+  function buildSearchIndex() {
+    if (searchIndex) return searchIndex;
+    var out = [];
+    CARDS.forEach(function (c) {
+      out.push({
+        type: 'sentence', cardId: c.id, cat: c.cat,
+        zh: c.zh, ja: c.ja, kana: c.kana || '',
+        extra: (c.words || []).map(function (w) { return w.t + w.m; }).join('')
+      });
+      (c.replies || []).forEach(function (r, i) {
+        out.push({
+          type: 'reply', cardId: c.id, replyIndex: i, cat: c.cat,
+          zh: r.zh, ja: r.ja, kana: r.kana || '', extra: ''
+        });
+      });
+    });
+    VOCAB.forEach(function (v) {
+      out.push({
+        type: 'word', cardId: v.id, cat: v.cat,
+        zh: v.zh, ja: v.ja, kana: v.kana || '', extra: v.pos || ''
+      });
+    });
+    out.forEach(function (it) {
+      it.hay = normText(it.zh + ' ' + it.ja + ' ' + it.kana + ' ' + it.extra);
+    });
+    searchIndex = out;
+    return out;
+  }
+
+  function searchTerms(q) {
+    return String(q || '').split(/[\s\u3000]+/).filter(Boolean).map(normText).filter(Boolean);
+  }
+
+  function doSearch(q) {
+    var terms = searchTerms(q);
+    searchState.terms = terms;
+    if (!terms.length) return [];
+    var idx = buildSearchIndex();
+    return idx.filter(function (it) {
+      for (var i = 0; i < terms.length; i++) {
+        if (it.hay.indexOf(terms[i]) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  function escapeRe(str) {
+    return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function highlight(text, q) {
+    var raw = String(q || '').split(/[\s\u3000]+/).filter(Boolean);
+    if (!raw.length) return esc(text);
+    var vars = [];
+    raw.forEach(function (t) {
+      vars.push(t);
+      var hira = t.replace(/[\u30a1-\u30f6]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0x60); });
+      var kata = t.replace(/[\u3041-\u3096]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) + 0x60); });
+      if (hira !== t) vars.push(hira);
+      if (kata !== t) vars.push(kata);
+    });
+    vars.sort(function (a, b) { return b.length - a.length; });
+    try {
+      var re = new RegExp('(' + vars.map(escapeRe).join('|') + ')', 'gi');
+      return esc(text).replace(re, '<mark>$1</mark>');
+    } catch (e) {
+      return esc(text);
+    }
+  }
+
+  function renderSearch() {
+    var input = $('search-input');
+    if (!input) return;
+    var q = input.value;
+    searchState.q = q;
+    $('search-clear').hidden = !q;
+
+    var meta = $('search-meta');
+    var box = $('search-results');
+
+    if (!String(q).trim()) {
+      meta.textContent = '输入中文、日语或假名开始搜索';
+      box.innerHTML = '<div class="search-empty">比如搜「过敏」「会計」「おみず」，<br>单词、句子和对方的回应会一起找出来。</div>';
+      return;
+    }
+
+    var results = doSearch(q);
+    searchState.results = results;
+
+    if (!results.length) {
+      meta.textContent = '找到 0 条';
+      box.innerHTML = '<div class="search-empty">没有找到「' + esc(q) + '」<br>试试减少关键词，比如只搜「过敏」</div>';
+      return;
+    }
+
+    var groups = { word: [], sentence: [], reply: [] };
+    results.forEach(function (it) { groups[it.type].push(it); });
+
+    var html = '';
+    var order = [
+      ['word', '单词'],
+      ['sentence', '句子'],
+      ['reply', '对方回应']
+    ];
+    order.forEach(function (pair) {
+      var list = groups[pair[0]];
+      if (!list.length) return;
+      html += '<div class="result-group-title">' + pair[1] + ' · ' + list.length + '</div>';
+      list.slice(0, 50).forEach(function (it) {
+        var main, sub, label, cls;
+        if (it.type === 'word') {
+          main = it.ja + (it.kana ? '　' + it.kana : '');
+          sub = it.zh;
+          label = '单词';
+          cls = 'word';
+        } else if (it.type === 'sentence') {
+          main = it.zh;
+          sub = it.ja;
+          label = '句子';
+          cls = 'sentence';
+        } else {
+          main = it.ja;
+          sub = it.zh + ' · 出自：' + ((byId[it.cardId] || {}).zh || '');
+          label = '回应';
+          cls = 'reply';
+        }
+        html += '<button class="result-item" data-type="' + it.type + '" data-card="' + it.cardId + '" data-reply="' +
+          (it.replyIndex == null ? '' : it.replyIndex) + '">' +
+          '<span class="result-badge ' + cls + '">' + label + '</span>' +
+          '<span class="result-body"><span class="result-main">' + highlight(main, q) + '</span>' +
+          '<span class="result-sub">' + highlight(sub, q) + '</span></span></button>';
+      });
+    });
+
+    meta.textContent = '找到 ' + results.length + ' 条';
+    box.innerHTML = html;
+    box.scrollTop = 0;
+  }
+
+  function openSearch() {
+    showView('search');
+    var input = $('search-input');
+    input.value = searchState.q || '';
+    renderSearch();
+    setTimeout(function () { try { input.focus(); } catch (e) {} }, 90);
+  }
+
+  function openSearchCard(type, cardId, replyIndex) {
+    var card = byId[cardId];
+    if (!card) return;
+    searchState.scroll = $('search-results').scrollTop;
+
+    session.kind = 'search';
+    session.current = card;
+    session.flipped = true;
+    session.revealed = {};
+    if (type === 'reply' && replyIndex != null) session.revealed[replyIndex] = true;
+
+    showView('study');
+    el.card.scrollTop = 0;
+    renderBack();
+    setRateVisible(false);
+    el.btnFlip.hidden = true;
+    el.rateRow.hidden = true;
+    el.doneActions.hidden = true;
+    $('search-actions').hidden = false;
+    $('progress-wrap').style.visibility = 'hidden';
+    updateStar();
+  }
+
+  function backToSearch() {
+    stopRec();
+    showView('search');
+    $('search-results').scrollTop = searchState.scroll || 0;
   }
 
   /* ---------------- 跟读识别 ---------------- */
@@ -1074,6 +1276,22 @@
   }
 
   /* ---------------- 事件 ---------------- */
+  $('btn-search').addEventListener('click', openSearch);
+  $('search-back').addEventListener('click', function () { showView('home'); });
+  $('search-clear').addEventListener('click', function () {
+    $('search-input').value = '';
+    renderSearch();
+    $('search-input').focus();
+  });
+  $('search-input').addEventListener('input', renderSearch);
+  $('search-results').addEventListener('click', function (e) {
+    var btn = e.target.closest('.result-item');
+    if (!btn) return;
+    var r = btn.getAttribute('data-reply');
+    openSearchCard(btn.getAttribute('data-type'), btn.getAttribute('data-card'), r === '' ? null : Number(r));
+  });
+  $('btn-back-search').addEventListener('click', backToSearch);
+
   $('btn-start').addEventListener('click', function () { startSession('all'); });
   $('freq-filter').addEventListener('click', function (e) {
     var b = e.target.closest('button');
@@ -1101,7 +1319,11 @@
   $('btn-review').addEventListener('click', function () { startSession('review'); });
   $('btn-fav').addEventListener('click', function () { startSession('fav'); });
   $('btn-settings').addEventListener('click', openSettings);
-  $('btn-back').addEventListener('click', function () { stopRec(); showView('home'); });
+  $('btn-back').addEventListener('click', function () {
+    if (session.kind === 'search') { backToSearch(); return; }
+    stopRec();
+    showView('home');
+  });
   el.btnFlip.addEventListener('click', flip);
   el.star.addEventListener('click', toggleStar);
   $('btn-again').addEventListener('click', function () { startSession(session.filter); });
@@ -1121,6 +1343,11 @@
 
   el.card.addEventListener('click', function (e) {
     if (e.target.closest('button')) return;
+    if (session.kind === 'search') {
+      session.flipped = !session.flipped;
+      if (session.flipped) renderBack(); else renderFront();
+      return;
+    }
     flip();
   });
 

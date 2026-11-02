@@ -15,8 +15,11 @@
   <!-- ================= 首页 ================= -->
   <section class="view view-home" id="view-home">
     <header class="home-head">
-      <div class="brand">日语旅游闪卡</div>
-      <div class="sub" id="home-sub">6 个场景</div>
+      <div class="home-head-text">
+        <div class="brand">日语旅游闪卡</div>
+        <div class="sub" id="home-sub">6 个场景</div>
+      </div>
+      <button class="icon-btn" id="btn-search" aria-label="搜索">🔍</button>
     </header>
 
     <div class="module-switch" id="module-switch">
@@ -57,11 +60,24 @@
     <p class="home-tip">先看中文说一遍 · 翻面看答案 · 🎤 打分</p>
   </section>
 
+  <!-- ================= 搜索 ================= -->
+  <section class="view view-search" id="view-search" hidden>
+    <div class="search-head">
+      <button class="icon-btn" id="search-back" aria-label="返回">←</button>
+      <input class="search-input" id="search-input" type="search"
+             placeholder="搜中文、日语或假名，空格分隔多个词"
+             autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="search-clear" id="search-clear" aria-label="清空" hidden>✕</button>
+    </div>
+    <div class="search-meta" id="search-meta"></div>
+    <div class="search-results" id="search-results"></div>
+  </section>
+
   <!-- ================= 练习 ================= -->
   <section class="view view-study" id="view-study" hidden>
     <div class="topbar">
       <button class="icon-btn" id="btn-back" aria-label="返回">←</button>
-      <div class="progress-wrap">
+      <div class="progress-wrap" id="progress-wrap">
         <div class="progress"><i id="progress-fill"></i></div>
         <div class="progress-text" id="progress-text">0 / 16</div>
       </div>
@@ -78,6 +94,9 @@
         <button class="btn rate again" data-level="1">不认识</button>
         <button class="btn rate fuzzy" data-level="2">有点模糊</button>
         <button class="btn rate good" data-level="3">认识</button>
+      </div>
+      <div class="search-actions" id="search-actions" hidden>
+        <button class="btn ghost" id="btn-back-search">← 返回搜索结果</button>
       </div>
       <div class="done-actions" id="done-actions" hidden>
         <button class="btn primary" id="btn-again">再来一轮</button>
@@ -187,7 +206,7 @@
         <button class="btn danger-ghost" id="btn-reset">重置学习进度</button>
       </div>
 
-      <p class="version-line">v1.1 · 2026-10-28</p>
+      <p class="version-line">v1.2 · 2026-11-02</p>
     </div>
   </div>
 
